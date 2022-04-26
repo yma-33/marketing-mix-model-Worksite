@@ -1,0 +1,74 @@
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#### DATA CONFIGURATIONS #####
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+time_period: "2020-Q1" # options: "2020-Q1"
+data_method: "file_path" # options: "vertica", "mock_data", "file_path"
+combCoeffs_file_path: "../data/q4_model_refresh_new/combinationCoeffs_no_nonMMFABU.csv" # for method="file_path"
+stakeholder_file_path: "tests/test_stakeholder_bounds.csv" # for method="file_path"
+output_channel_camp_file_path: "tests/output/test/" # output folder
+base: 1000 # the average base across quarters in 2020 (see end of code in final_model.R)
+budget_constraint_type: total # options: 'total' (optimize on total budget) or 'category' (optimize on category budgets)
+channel_campaign_constraint: none # options: 'upper_lower', 'equality', or 'none'
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#### BUDGET CONFIGURATIONS #####
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Total quarterly budget (used when budget_constraint_type=="total")
+B_dict:
+  2020-Q1: 4000
+
+# Categorical quarterly budget (used when budget_constraint_type=="category")
+B_Social_dict:
+  2020-Q1: 1000
+
+B_Brand_dict:
+  2020-Q1: 3000
+
+B_CRM_dict:
+  2020-Q1: 0
+
+B_Search_dict:
+  2020-Q1: 0
+
+# Maps each channel to each category for budgeting purposes
+parent_dict:
+  Social:
+    - Facebook
+    - Instagram
+    - Snapchat
+    - Pinterest
+    - Twitter
+  Brand:
+    - Audio
+    - Cinema
+    - Digital
+    - Display
+    - TV
+    - OOH
+    - Print
+  CRM:
+    - Email
+    - Direct
+    - Newsletter
+  Search:
+    - GDN
+    - SEM
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#### OPTIMIZATION CONFIGURATIONS #####
+# These should rarely be changed.
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+update_data: False # "True" updates optimization json
+optimize_all_weeks_at_once: False # objective function that stacks 13 weeks
+remove_zero_bounds: True # remove channel_campaigns with upper bound 0
+cpi_agg_method: "total" # cpi aggregation options: "curr_quarter", "all_quarters", "total"
+output_alphas: ["state", "lob", "segment"] # output dimensions
+output_fp: "tests/test_data.json" # optimization data file path
+ftol: .000001 # options: optimization termation tolerance
+jac_method: "3-point" # jacobian approximation
+max_iterations: 500 # options: optimization maximum number of iterations
+number_weeks_in_quarter: 13 # number of weeks in the given quarter.
+optimization_type: "single_optimization" # Options: single_optimization (one simulation), multiple_optimization (13 optimizations), budget_plot
+B_lower: 500000 # For "budget_plot"
+B_upper: 10000000
+B_inc: 500000

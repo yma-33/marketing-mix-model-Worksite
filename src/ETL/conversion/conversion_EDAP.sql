@@ -1,0 +1,159 @@
+-- get sales data from EDAP
+DROP TABLE IF EXISTS mix_media_marketing.conversion_edap_test1;
+CREATE TABLE  IF NOT EXISTS  mix_media_marketing.conversion_edap_test1 AS
+WITH tmp AS (
+SELECT DP.DIM_PARTY_NATURAL_KEY_HASH_UUID
+	, DA.DIM_AGREEMENT_NATURAL_KEY_HASH_UUID
+	, DA.AGREEMENT_NR
+	, DA.agreement_source_cde
+	, DA.AGREEMENT_STATUS_CDE
+	, DA.FACE_AMT
+	, DA.ISSUE_DT
+	, RPR.PARTY_ROLE_DESC
+	, DPRO.line_of_business_cde AS LOB
+	, split_part(DPRO.major_product_type_cde, '&&', 2) AS PRODUCT
+FROM EDW_cip_VW.REL_PARTY_AGREEMENT_VW RPA
+INNER JOIN EDW_cip_VW.PARTY_MASTER_OF_MASTERS_XREF_VW XREF
+	ON RPA.DIM_PARTY_NATURAL_KEY_HASH_UUID = XREF.DIM_PRIOR_PARTY_NATURAL_KEY_HASH_UUID
+	AND RPA.CURRENT_ROW_IND = TRUE AND RPA.LOGICAL_DELETE_IND = FALSE
+	AND XREF.CURRENT_ROW_IND = TRUE AND XREF.LOGICAL_DELETE_IND = FALSE AND XREF.PARTY_ID_TYPE_CDE = 'Mstr_prty_id'
+INNER JOIN EDW_cip_VW.DIM_PARTY_VW DP
+	ON DP.DIM_PARTY_NATURAL_KEY_HASH_UUID = XREF.DIM_PARTY_NATURAL_KEY_HASH_UUID
+	AND DP.CURRENT_ROW_IND = TRUE AND DP.LOGICAL_DELETE_IND = FALSE
+INNER JOIN EDW_cip_VW.DIM_AGREEMENT_VW DA
+	ON DA.DIM_AGREEMENT_NATURAL_KEY_HASH_UUID = RPA.DIM_AGREEMENT_NATURAL_KEY_HASH_UUID
+	AND DA.CURRENT_ROW_IND = TRUE AND DA.LOGICAL_DELETE_IND = FALSE
+INNER JOIN EDW_cip_VW.REF_PARTY_ROLE_VW RPR
+	ON RPR.REF_PARTY_ROLE_NATURAL_KEY_HASH_UUID = RPA.REF_PARTY_ROLE_NATURAL_KEY_HASH_UUID
+	AND RPR.CURRENT_ROW_IND = TRUE AND RPR.LOGICAL_DELETE_IND = FALSE
+INNER JOIN edw_cip_vw.dim_product_vw DPRO
+	ON RPA.dim_product_natural_key_hash_uuid = DPRO.dim_product_natural_key_hash_uuid
+	AND RPR.CURRENT_ROW_IND = TRUE AND RPR.LOGICAL_DELETE_IND = FALSE
+WHERE DA.AGREEMENT_STATUS_CDE IN ('If', 'Tm', 'IF', 'TM')
+AND RPR.PARTY_ROLE_DESC = 'Owner'
+AND DA.issue_dt BETWEEN '2010-10-01' AND '2020-12-31'
+GROUP BY 1,2,3,4,5,6,7,8,9,10
+),
+address AS (
+SELECT  a.DIM_AGREEMENT_NATURAL_KEY_HASH_UUID
+	, a.AGREEMENT_NR
+	, a.agreement_source_cde
+	, a.DIM_PARTY_NATURAL_KEY_HASH_UUID
+	, a.FACE_AMT
+	, a.ISSUE_DT
+	, a.PARTY_ROLE_DESC
+	, a.LOB
+	, a.PRODUCT
+	, DADR.STATE_CDE
+	, RPCS.PARTY_CONTACT_SOURCE_CDE
+	, RAT.ADDRESS_TYPE_CDE
+FROM tmp a
+INNER JOIN EDW_cip_VW.PARTY_MASTER_OF_MASTERS_XREF_VW XREF
+	ON a.DIM_PARTY_NATURAL_KEY_HASH_UUID = XREF.DIM_PRIOR_PARTY_NATURAL_KEY_HASH_UUID
+	AND XREF.CURRENT_ROW_IND = TRUE AND XREF.LOGICAL_DELETE_IND = FALSE AND XREF.PARTY_ID_TYPE_CDE = 'Mstr_prty_id'
+LEFT JOIN EDW_cip_VW.REL_PARTY_ADDRESS_VW RPADR
+	ON RPADR.DIM_PARTY_NATURAL_KEY_HASH_UUID = XREF.DIM_PRIOR_PARTY_NATURAL_KEY_HASH_UUID
+	AND RPADR.CURRENT_ROW_IND = TRUE AND RPADR.LOGICAL_DELETE_IND = FALSE
+INNER JOIN EDW_cip_VW.dim_party_VW DP
+	ON DP.DIM_PARTY_NATURAL_KEY_HASH_UUID = XREF.DIM_PARTY_NATURAL_KEY_HASH_UUID
+	AND DP.CURRENT_ROW_IND = TRUE AND DP.LOGICAL_DELETE_IND = FALSE
+LEFT JOIN EDW_cip_VW.DIM_ADDRESS_VW DADR
+	ON DADR.DIM_ADDRESS_NATURAL_KEY_HASH_UUID = RPADR.DIM_ADDRESS_NATURAL_KEY_HASH_UUID
+	AND DADR.CURRENT_ROW_IND = TRUE AND DADR.LOGICAL_DELETE_IND = FALSE
+LEFT JOIN EDW_cip_VW.REF_PARTY_CONTACT_SOURCE_VW RPCS
+	ON RPCS.REF_PARTY_CONTACT_SOURCE_NATURAL_KEY_HASH_UUID = RPADR.REF_PARTY_CONTACT_SOURCE_NATURAL_KEY_HASH_UUID
+	AND RPCS.CURRENT_ROW_IND = TRUE AND RPCS.LOGICAL_DELETE_IND = FALSE
+LEFT JOIN EDW_cip_VW.REF_ADDRESS_TYPE_VW RAT
+	ON RAT.REF_ADDRESS_TYPE_NATURAL_KEY_HASH_UUID = RPADR.REF_ADDRESS_TYPE_NATURAL_KEY_HASH_UUID
+	AND RAT.CURRENT_ROW_IND = TRUE AND RAT.LOGICAL_DELETE_IND = FALSE
+WHERE  DADR.STATE_CDE IS NOT NULL
+GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12
+),
+rnk AS (
+SELECT AGREEMENT_NR, agreement_source_cde, DIM_PARTY_NATURAL_KEY_HASH_UUID, FACE_AMT, ISSUE_DT, PARTY_ROLE_DESC,
+LOB, PRODUCT, STATE_CDE, PARTY_CONTACT_SOURCE_CDE, ADDRESS_TYPE_CDE,
+DENSE_RANK() OVER(PARTITION BY AGREEMENT_NR, agreement_source_cde ORDER BY ISSUE_DT) AS policy_rnk
+FROM address
+)
+SELECT * FROM rnk WHERE policy_rnk = 1
+
+------------------------------------------------------------------------
+-- best practice conversion
+DROP TABLE IF EXISTS mix_media_marketing.conversion_edap_best;
+CREATE TABLE  IF NOT EXISTS  mix_media_marketing.conversion_edap_best AS
+WITH tmp AS (
+SELECT a.*,
+DENSE_RANK() over(PARTITION BY AGREEMENT_NR, agreement_source_cde ORDER BY STATE_CDE) AS rnk
+FROM mix_media_marketing.conversion_edap_test1 a
+WHERE PARTY_CONTACT_SOURCE_CDE = 'Ecdm'
+AND ADDRESS_TYPE_CDE = 'Best' -- best practice to ensure no duplicate in address
+)
+SELECT * FROM tmp WHERE rnk = 1
+
+------------------------------------------------------------------------
+-- none best practice single state per agreement
+DROP TABLE IF EXISTS mix_media_marketing.conversion_edap_no_best;
+CREATE TABLE  IF NOT EXISTS  mix_media_marketing.conversion_edap_no_best AS
+WITH best AS (
+SELECT AGREEMENT_NR, agreement_source_cde
+FROM mix_media_marketing.conversion_edap_test1
+WHERE ADDRESS_TYPE_CDE = 'Best'
+AND PARTY_CONTACT_SOURCE_CDE = 'Ecdm'
+GROUP BY 1,2
+),
+tmp AS (
+SELECT
+a.AGREEMENT_NR, a.agreement_source_cde, a.FACE_AMT, a.ISSUE_DT, a.LOB, a.PRODUCT, a.STATE_CDE
+,DIM_PARTY_NATURAL_KEY_HASH_UUID
+,b.AGREEMENT_NR AS best_agree
+FROM mix_media_marketing.conversion_edap_test1 a
+LEFT JOIN best b
+ON a.AGREEMENT_NR = b.AGREEMENT_NR
+AND a.agreement_source_cde = b.agreement_source_cde
+GROUP BY 1,2,3,4,5,6,7,8,9
+),
+tmp2 AS (
+SELECT AGREEMENT_NR, agreement_source_cde, count(*) AS cnt
+FROM tmp
+WHERE best_agree IS NULL
+GROUP BY 1,2
+),
+tmp3 AS (
+SELECT a.*
+FROM (SELECT * FROM tmp WHERE best_agree IS NULL) a
+INNER JOIN (SELECT AGREEMENT_NR, agreement_source_cde FROM tmp2
+WHERE cnt = 1) b
+ON a.AGREEMENT_NR = b.AGREEMENT_NR
+AND a.agreement_source_cde = b.agreement_source_cde
+)
+SELECT * FROM tmp3
+
+-- combine agreements from both best practice and none best
+DROP TABLE IF EXISTS mix_media_marketing.conversion_edap_all;
+CREATE TABLE  IF NOT EXISTS  mix_media_marketing.conversion_edap_all AS
+WITH tmp AS (
+SELECT AGREEMENT_NR, agreement_source_cde, FACE_AMT,
+ISSUE_DT, LOB, PRODUCT, upper(STATE_CDE) AS STATE_CDE, 'Best' AS source
+FROM mix_media_marketing.conversion_edap_best
+GROUP BY 1,2,3,4,5,6,7,8
+UNION ALL
+(SELECT AGREEMENT_NR, agreement_source_cde, FACE_AMT,
+ISSUE_DT, LOB, PRODUCT, upper(STATE_CDE) AS STATE_CDE, 'No_best' AS source
+FROM mix_media_marketing.conversion_edap_no_best
+GROUP BY 1,2,3,4,5,6,7,8)
+)
+SELECT a.*, c.region
+FROM tmp a
+JOIN (SELECT state FROM mix_media_marketing.state_2letter
+GROUP BY 1) b
+ON upper(a.STATE_CDE) = b.state
+JOIN mix_media_marketing.csv_region_state c
+ON upper(a.STATE_CDE) = c.state
+
+-----------------------------------------------------
+-- historical date
+DROP TABLE IF EXISTS mix_media_marketing.historical_date
+CREATE TABLE IF NOT EXISTS mix_media_marketing.historical_date AS
+SELECT ISSUE_DT AS date FROM teradata_hist.AGMT_HIST_VW
+WHERE issue_dt BETWEEN '2017-10-01' AND '2020-09-30'
+GROUP BY 1 ORDER BY 1

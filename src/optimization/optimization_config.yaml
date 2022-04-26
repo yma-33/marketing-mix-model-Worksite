@@ -1,0 +1,152 @@
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#### DATA CONFIGURATIONS #####
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+time_period: "2022-Q2" # options: "2020-Q3", "2020-Q4", "2021-Q1", "2021-Q2", "2021-Q3", "2021-Q4"
+data_method: "file_path" # options: "vertica", "mock_data", "file_path"
+combCoeffs_file_path: "../data/2022q1_model_refresh/combinationCoeffs.csv" # for method="file_path"
+stakeholder_file_path: "stakeholder_bounds.csv" # for method="file_path"
+output_channel_camp_file_path: "output/2022Q2_rec/" # output folder
+base: 61171 #62561 is the base from Q3 2020 to Q2 2021, 58837 is the average base in 2020 (see end of code in final_model.R)
+budget_constraint_type: category # options: 'total' (optimize on total budget) or 'category' (optimize on category budgets)
+channel_campaign_constraint: upper_lower # options: 'upper_lower', 'equality', or 'none'
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#### BUDGET CONFIGURATIONS #####
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Total quarterly budget (used when budget_constraint_type=="total")
+B_dict:
+  2018-Q1: 215136226
+  2018-Q2: 99790679
+  2018-Q3: 7242346
+  2018-Q4: 64553357
+  2019-Q1: 96922386
+  2019-Q2: 93216284
+  2019-Q3: 31427029
+  2019-Q4: 108596670
+  2020-Q1: 23490490
+  2020-Q2: 48965860
+  2020-Q3: 116583907
+  2020-Q4: 7538982
+  2021-Q1: 8288478
+  2021-Q2: 11637021
+  2021-Q3: 13743707
+  2021-Q4: 7885000
+  2022-Q1: 10520000
+  2022-Q2: 11571650
+
+# Categorical quarterly budget (used when budget_constraint_type=="category")
+B_Social_dict:
+  2018-Q1: 99681
+  2018-Q2: 845971
+  2018-Q3: 283388
+  2018-Q4: 787412
+  2019-Q1: 641899
+  2019-Q2: 540316
+  2019-Q3: 448893
+  2019-Q4: 442341
+  2020-Q1: 318443
+  2020-Q2: 183975
+  2020-Q3: 746292
+  2020-Q4: 720255
+  2021-Q1: 208567
+  2021-Q2: 526751
+  2021-Q3: 730000
+  2021-Q4: 1000000
+  2022-Q1: 1000000
+  2022-Q2: 2000000
+B_Brand_dict:
+  2018-Q1: 909476
+  2018-Q2: 1237079
+  2018-Q3: 104462
+  2018-Q4: 19843510
+  2019-Q1: 94490211
+  2019-Q2: 91185217
+  2019-Q3: 29731844
+  2019-Q4: 107294083
+  2020-Q1: 21534845
+  2020-Q2: 47469126
+  2020-Q3: 114596375
+  2020-Q4: 5678049
+  2021-Q1: 6073307
+  2021-Q2: 10344557
+  2021-Q3: 11794281
+  2021-Q4: 5600000
+  2022-Q1: 7700000
+  2022-Q2: 8395000
+B_CRM_dict:
+  2018-Q1: 138
+  2018-Q2: 641
+  2018-Q3: 133598
+  2018-Q4: 199405
+  2019-Q1: 59400
+  2019-Q2: 203907
+  2019-Q3: 192908
+  2019-Q4: 316593
+  2020-Q1: 78757
+  2020-Q2: 150175
+  2020-Q3: 392502
+  2020-Q4: 519947
+  2021-Q1: 295200
+  2021-Q2: 18553
+  2021-Q3: 1326
+  2021-Q4: 85000
+  2022-Q1: 70000
+  2022-Q2: 100
+B_Search_dict:
+  2018-Q1: 1852499
+  2018-Q2: 1421476
+  2018-Q3: 1424650
+  2018-Q4: 1163700
+  2019-Q1: 1730279
+  2019-Q2: 1286846
+  2019-Q3: 1035246
+  2019-Q4: 543295
+  2020-Q1: 1558445
+  2020-Q2: 1162583
+  2020-Q3: 848737
+  2020-Q4: 620727
+  2021-Q1: 1606728
+  2021-Q2: 747160
+  2021-Q3: 1218100
+  2021-Q4: 1200000
+  2022-Q1: 1750000
+  2022-Q2: 1176650
+# Maps each channel to each category for budgeting purposes
+parent_dict:
+  Social:
+    - Facebook
+    - Instagram
+    - Snapchat
+    - Pinterest
+    - Twitter
+  Brand:
+    - Audio
+    - Cinema
+    - Digital
+    - Display
+    - TV
+    - OOH
+    - Print
+    - YouTube
+  CRM:
+    - Email
+    - Direct
+    - Newsletter
+  Search:
+    - GDN
+    - SEM
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#### OPTIMIZATION CONFIGURATIONS #####
+# These should rarely be changed.
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+update_data: True # "True" updates optimization json
+optimize_all_weeks_at_once: False # objective function that stacks 13 weeks
+remove_zero_bounds: True # remove channel_campaigns with upper bound 0
+cpi_agg_method: "total" # cpi aggregation options: "curr_quarter", "all_quarters", "total"
+output_alphas: ["state", "lob", "segment"] # output dimensions
+output_fp: "optimization_data.json" # optimization data file path
+ftol: .000001 # options: optimization termation tolerance
+jac_method: "3-point" # jacobian approximation
+max_iterations: 500 # options: optimization maximum number of iterations
+number_weeks_in_quarter: 13 # number of weeks in the given quarter.
