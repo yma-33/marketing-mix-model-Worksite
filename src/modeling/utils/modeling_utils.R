@@ -56,7 +56,7 @@ solve_constrained_model<-function(DMat,FMat,outputValues,mmo_constraints,model_c
     WDM<-DMat_intercept
   }
   #DM_temp <- crossprod(DMat_intercept,WDM)
-  DM_temp <- round(crossprod(DMat_intercept,WDM),digits = 0)
+  DM_temp <- round(crossprod(DMat_intercept,WDM),digits = 4)
   if (!is.symmetric.matrix(DM_temp)){
     print("In solve_constrained_model, DM_temp is not symmetric. Using nearest pd matrix... ")
     DM_max_eig <- max(eigen(DM_temp)$values)

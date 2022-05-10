@@ -208,15 +208,15 @@ final_config <-function(config){
   config$combination_threshold <- 0.2
   config$mmo_reset_by <- "state"
   b_max_life <- 12
-  b_max_ann <- 12
+  b_max_lcm <- 12
   b_max_di <- 12
-  b_max_invs <- 12
-  config$b_max <- c("Life" = b_max_life, "Ann" = b_max_ann, "Di" = b_max_di, "Invs" = b_max_invs)
+  b_max_acc <- 12
+  config$b_max <- c("Life" = b_max_life, "Lcm" = b_max_lcm, "Di" = b_max_di, "Accident" = b_max_acc)
   d_max_life <- 25
-  d_max_ann <- 25
+  d_max_lcm <- 25
   d_max_di <- 25
-  d_max_invs <- 25
-  config$d_max <- c("Life" = d_max_life, "Ann" = d_max_ann, "Di" = d_max_di, "Invs" = d_max_invs)
+  d_max_acc <- 25
+  config$d_max <- c("Life" = d_max_life, "Lcm" = d_max_lcm, "Di" = d_max_di, "Accident" = d_max_acc)
 
   return(config)
 }
